@@ -1,0 +1,57 @@
+package db
+
+import (
+	"github.com/mgutz/logxi/v1"
+
+	"github.com/jmoiron/sqlx"
+)
+
+// Database operation modes
+const (
+	ModeProd = iota
+	ModeDev
+)
+
+// Config is the struct containing the database connection parameters
+type Config struct {
+	DataSource string
+	IdleConn   int
+	MaxConn    int
+	Mode       int
+}
+
+var (
+	// DB is the sqlx database connection
+	DB     *sqlx.DB
+	logger log.Logger
+)
+
+// InitializeModule setup the db module for correct operation
+func InitializeModule(dbLogger log.Logger) {
+	if dbLogger == nil {
+		panic("invalid logger configuration")
+	}
+	logger = dbLogger
+	logger.Info("module ready")
+}
+
+// InitializeDatabaseConnection tries a connections to the database, updates
+// it's schema and makes it ready for use
+func InitializeDatabaseConnection(config Config) error {
+	var err error
+	DB, err = sqlx.Connect("postgres", config.DataSource)
+	if err != nil {
+		return err
+	}
+
+	DB.SetMaxIdleConns(config.IdleConn)
+	DB.SetMaxOpenConns(config.MaxConn)
+
+	// start pinging
+	startPing()
+
+	// go verify and update schema
+	return checkAndUpdateSchema()
+	// return
+	//return nil
+}

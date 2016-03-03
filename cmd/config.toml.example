@@ -1,0 +1,30 @@
+[tracker]
+bind_address = "0.0.0.0"  # bind address for udp socket
+port = 1234               # udp port
+allow_scraping = true     # enables or disables scraping functionality
+interval = 900            # interval between announces sent to the clients (sec)
+
+[database]
+# Supported parameters:
+# * dbname - The name of the database to connect to
+# * user - The user to sign in as
+# * password - The user's password
+# * host - The host to connect to. Values that start with / are for unix domain
+#          sockets. (default is localhost)
+# * port - The port to bind to. (default is 5432)
+# * sslmode - Whether or not to use SSL (default is require, this is not the
+#             default for libpq)
+# * connect_timeout - Maximum wait for connection, in seconds.
+#                     Zero or not specified means wait indefinitely.
+# * sslcert - Cert file location. The file must contain PEM encoded data.
+# * sslkey - Key file location. The file must contain PEM encoded data.
+# * sslrootcert - The location of the root certificate file. The file must
+#                 contain PEM encoded data.
+connection_string = "postgres://btracker@localhost/btracker?sslmode=disable"
+idle_connections = 2          # keep at most # idle connections
+max_connections = 5           # max concurrent connections to db
+mode = "prod|dev"             # set running mode. dev is slower (query debug)
+
+[logging]
+level = "info"      # one of: alert, critical, error, warning, notice, info,
+#                             debug, trace
