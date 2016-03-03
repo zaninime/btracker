@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"net"
 	"os"
 
 	"github.com/BurntSushi/toml"
@@ -84,4 +85,14 @@ func main() {
 	}
 
 	// setup socket
+	localAddr, err := net.ResolveUDPAddr("udp4", fmt.Sprintf("%s:%d", config.Tracker.BindAddress, config.Tracker.Port))
+	if err != nil {
+		mainLogger.Fatal("couldn't parse bind address", "err", err)
+	}
+	conn, err := net.ListenUDP("udp4", localAddr)
+	if err != nil {
+		mainLogger.Fatal("couldn't bind to address", "addr", localAddr, "err", err)
+	}
+	mainLogger.Info("listening", "addr", localAddr)
+	listenUDP(conn)
 }

@@ -33,9 +33,10 @@ const (
 	-- \run\
 
 	CREATE TABLE "public"."connection" (
-	  "id" bytea PRIMARY KEY,
+	  "id" bytea NOT NULL,
 	  "ip" inet NOT NULL,
-	  "expiry" timestamp NOT NULL
+	  "expiry" timestamp NOT NULL,
+	  PRIMARY KEY ("id", "ip")
 	);
 
 	-- \run\

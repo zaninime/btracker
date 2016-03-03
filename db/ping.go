@@ -63,6 +63,7 @@ func pinger() {
 			if err := DB.Ping(); err != nil {
 				logger.Warn("ping failed", "err", err)
 			} else {
+				logger.Debug("ping successful")
 				pingBackoff.Reset()
 			}
 			go func() {
@@ -70,7 +71,7 @@ func pinger() {
 				if expired {
 					logger.Fatal("database is not available, backoff expired")
 				}
-				logger.Debug("rescheduling ping", "delay", v)
+				logger.Debug("rescheduling ping", "delay", v.String())
 				<-time.After(v)
 				pingChannels.time <- true
 			}()
