@@ -6,9 +6,12 @@ import (
 	"github.com/jmoiron/sqlx"
 )
 
+// Mode is the type for representing database connection mode
+type Mode int
+
 // Database operation modes
 const (
-	ModeProd = iota
+	ModeProd Mode = iota
 	ModeDev
 )
 
@@ -17,7 +20,7 @@ type Config struct {
 	DataSource string
 	IdleConn   int
 	MaxConn    int
-	Mode       int
+	Mode       Mode
 }
 
 var (

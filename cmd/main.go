@@ -69,7 +69,7 @@ func main() {
 	dbLogger.SetLevel(logLevels[config.Logging.Level])
 	db.InitializeModule(dbLogger)
 
-	dbModes := map[string]int{
+	dbModes := map[string]db.Mode{
 		"prod": db.ModeProd,
 		"dev":  db.ModeDev,
 	}
@@ -82,4 +82,6 @@ func main() {
 	if err = db.InitializeDatabaseConnection(dbConfig); err != nil {
 		mainLogger.Fatal("db initialization failed", "err", err)
 	}
+
+	// setup socket
 }
