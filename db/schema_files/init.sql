@@ -1,21 +1,20 @@
 CREATE TABLE "public"."torrent" (
-  "id" serial PRIMARY KEY,
-  "completed" integer NOT NULL DEFAULT 0,
-  "hash" bytea NOT NULL
+  "hash" bytea PRIMARY KEY,
+  "completed" integer NOT NULL DEFAULT 0
 );
 
 -- \run\
 
 CREATE TABLE "public"."peer" (
   "id" bytea NOT NULL,
-  "torrent_id" integer REFERENCES "torrent"("id") NOT NULL,
+  "torrent_id" bytea REFERENCES "torrent"("hash") NOT NULL,
   "state" integer NOT NULL,
   "ip" inet NOT NULL,
   "port" integer NOT NULL,
   "downloaded" integer NOT NULL,
   "uploaded" integer NOT NULL,
   "left" integer NOT NULL,
-  "last_updated" timestamp NOT NULL DEFAULT NOW(),
+  "last_updated" timestamp with time zone NOT NULL DEFAULT NOW(),
   PRIMARY KEY ("id", "torrent_id")
 );
 
@@ -24,7 +23,7 @@ CREATE TABLE "public"."peer" (
 CREATE TABLE "public"."connection" (
   "id" bytea NOT NULL,
   "ip" inet NOT NULL,
-  "expiry" timestamp NOT NULL,
+  "expiry" timestamp with time zone NOT NULL,
   PRIMARY KEY ("id", "ip")
 );
 

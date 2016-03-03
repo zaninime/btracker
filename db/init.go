@@ -54,7 +54,10 @@ func InitializeDatabaseConnection(config Config) error {
 	startPing()
 
 	// go verify and update schema
-	return checkAndUpdateSchema()
-	// return
-	//return nil
+	err = checkAndUpdateSchema()
+	if err != nil {
+		return err
+	}
+
+	return prepareStatements()
 }

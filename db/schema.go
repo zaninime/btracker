@@ -10,23 +10,22 @@ const lastSchemaVersion = 1
 
 const (
 	schemaInit = `CREATE TABLE "public"."torrent" (
-	  "id" serial PRIMARY KEY,
-	  "completed" integer NOT NULL DEFAULT 0,
-	  "hash" bytea NOT NULL
+	  "hash" bytea PRIMARY KEY,
+	  "completed" integer NOT NULL DEFAULT 0
 	);
 
 	-- \run\
 
 	CREATE TABLE "public"."peer" (
 	  "id" bytea NOT NULL,
-	  "torrent_id" integer REFERENCES "torrent"("id") NOT NULL,
+	  "torrent_id" bytea REFERENCES "torrent"("hash") NOT NULL,
 	  "state" integer NOT NULL,
 	  "ip" inet NOT NULL,
 	  "port" integer NOT NULL,
 	  "downloaded" integer NOT NULL,
 	  "uploaded" integer NOT NULL,
 	  "left" integer NOT NULL,
-	  "last_updated" timestamp NOT NULL DEFAULT NOW(),
+	  "last_updated" timestamp with time zone NOT NULL DEFAULT NOW(),
 	  PRIMARY KEY ("id", "torrent_id")
 	);
 
@@ -35,7 +34,7 @@ const (
 	CREATE TABLE "public"."connection" (
 	  "id" bytea NOT NULL,
 	  "ip" inet NOT NULL,
-	  "expiry" timestamp NOT NULL,
+	  "expiry" timestamp with time zone NOT NULL,
 	  PRIMARY KEY ("id", "ip")
 	);
 
@@ -91,13 +90,18 @@ func checkAndUpdateSchema() error {
 func runSchemaInit() error {
 	logger.Debug("running schema initialization")
 	queries := strings.Split(schemaInit, "-- \\run\\")
+	tx := DB.MustBegin()
 	for _, q := range queries {
 		q = strings.TrimSpace(q)
 		logger.Debug("running query", "q", q)
-		_, err := DB.Exec(q)
+		_, err := tx.Exec(q)
 		if err != nil {
+			tx.Rollback()
 			return err
 		}
+	}
+	if err := tx.Commit(); err != nil {
+		return err
 	}
 	return nil
 }
