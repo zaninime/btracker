@@ -7,7 +7,7 @@ import (
 	"github.com/BurntSushi/toml"
 	_ "github.com/lib/pq"
 	"github.com/mgutz/logxi/v1"
-	"go.zanini.me/btracker/db"
+	"github.com/zaninime/btracker/db"
 	"gopkg.in/alecthomas/kingpin.v2"
 )
 
