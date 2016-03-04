@@ -6,6 +6,7 @@ import (
 	"os"
 
 	"github.com/BurntSushi/toml"
+	"github.com/jasonlvhit/gocron"
 	_ "github.com/lib/pq"
 	"github.com/mgutz/logxi/v1"
 	"github.com/zaninime/btracker/db"
@@ -84,6 +85,12 @@ func main() {
 		mainLogger.Fatal("db initialization failed", "err", err)
 	}
 
+	// cron scheduler
+	s := gocron.NewScheduler()
+	s.Every(2).Minutes().Do(db.ClearConnections)
+	s.Every(30).Minutes().Do(db.ClearPeers, 1200)
+	go cron(s)
+
 	// setup socket
 	localAddr, err := net.ResolveUDPAddr("udp4", fmt.Sprintf("%s:%d", config.Tracker.BindAddress, config.Tracker.Port))
 	if err != nil {
@@ -95,4 +102,8 @@ func main() {
 	}
 	mainLogger.Info("listening", "addr", localAddr)
 	listenUDP(conn)
+}
+
+func cron(sched *gocron.Scheduler) {
+	<-sched.Start()
 }

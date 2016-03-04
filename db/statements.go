@@ -50,6 +50,10 @@ var (
 		`UPDATE "public"."peer" SET "state" = $3, "ip" = $4, "port" = $5, "downloaded" = $6, "uploaded" = $7, "left" = $8, "last_updated" = NOW() WHERE id = decode($1, 'base64') AND torrent_id = decode($2, 'base64')`,
 		nil,
 	}
+	stmtGetTorrentStats = preparedStmt{
+		`SELECT "completed", "downloaded" FROM "public"."torrent" WHERE "hash" = decode($1, 'base64')`,
+		nil,
+	}
 )
 
 func prepareStatements() error {
@@ -99,6 +103,12 @@ func prepareStatements() error {
 	stmtUpdatePeer.Stmt, err = DB.Prepare(stmtUpdatePeer.String)
 	if err != nil {
 		logger.Error("error while preparing stmtUpdatePeer", "err", err)
+		return err
+	}
+
+	stmtGetTorrentStats.Stmt, err = DB.Prepare(stmtGetTorrentStats.String)
+	if err != nil {
+		logger.Error("error while preparing stmtGetTorrentStats", "err", err)
 		return err
 	}
 	return nil

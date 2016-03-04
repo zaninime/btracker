@@ -1,7 +1,7 @@
 package udp
 
 import (
-  "fmt"
+  //"fmt"
   "net"
   "bytes"
   "encoding/binary"
@@ -129,7 +129,7 @@ func Parse(data []byte) *ProtocolVars {
   %% write init;
   %% write exec;
 
-  fmt.Printf("%+v\n", protocolVars)
+  //fmt.Printf("%+v\n", protocolVars)
 
   if !valid {
     return nil

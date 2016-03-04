@@ -7,7 +7,7 @@ import (
 
 var (
 	pingChannels struct {
-		time chan bool
+		time <-chan time.Time
 		exit chan bool
 	}
 	pingBackoff = backoffManager{
@@ -40,14 +40,9 @@ func (bm *backoffManager) Reset() {
 
 func startPing() {
 	logger.Info("scheduling backoff ping to postgres")
-	pingChannels.time = make(chan bool)
+	pingChannels.time = time.After(10)
 	pingChannels.exit = make(chan bool)
 	go pinger()
-	go func() {
-		v, _ := pingBackoff.Next()
-		<-time.After(v)
-		pingChannels.time <- true
-	}()
 }
 
 func stopPing() {
@@ -66,15 +61,12 @@ func pinger() {
 				logger.Debug("ping successful")
 				pingBackoff.Reset()
 			}
-			go func() {
-				v, expired := pingBackoff.Next()
-				if expired {
-					logger.Fatal("database is not available, backoff expired")
-				}
-				logger.Debug("rescheduling ping", "delay", v.String())
-				<-time.After(v)
-				pingChannels.time <- true
-			}()
+			v, expired := pingBackoff.Next()
+			if expired {
+				logger.Fatal("database is not available, backoff expired")
+			}
+			logger.Debug("rescheduling ping", "delay", v.String())
+			pingChannels.time = time.After(v)
 		case <-pingChannels.exit:
 			logger.Debug("ping stopped")
 			return

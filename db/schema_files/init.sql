@@ -1,6 +1,7 @@
 CREATE TABLE "public"."torrent" (
   "hash" bytea PRIMARY KEY,
-  "completed" integer NOT NULL DEFAULT 0
+  "completed" integer NOT NULL DEFAULT 0,
+  "downloaded" integer NOT NULL DEFAULT 0
 );
 
 -- \run\

@@ -1,6 +1,9 @@
 package udp
 
-import "encoding/binary"
+import (
+	"encoding/binary"
+	"net"
+)
 
 type ConnectionRequestResponse struct {
 	TransactionID []byte
@@ -15,8 +18,19 @@ type AnnounceResponse struct {
 	Peers         []Peer
 }
 
+type ScrapeResponse struct {
+	TransactionID []byte
+	Stats         []TorrentStats
+}
+
+type TorrentStats struct {
+	Complete   int32
+	Downloaded int32
+	Incomplete int32
+}
+
 type Peer struct {
-	IP   []byte
+	IP   net.IP
 	Port uint16
 }
 
@@ -43,7 +57,7 @@ func (ar *AnnounceResponse) Accept() []byte {
 	var start int
 	for i, p := range ar.Peers {
 		start = 20 + i*6
-		copy(pkt[start:start+4], p.IP)
+		copy(pkt[start:start+4], p.IP.To4())
 		binary.BigEndian.PutUint16(pkt[start+4:start+6], p.Port)
 	}
 	return pkt
@@ -51,6 +65,23 @@ func (ar *AnnounceResponse) Accept() []byte {
 
 func (ar *AnnounceResponse) Error(msg string) []byte {
 	return makeGenericErrorPacket(msg, ar.TransactionID)
+}
+
+func (sr *ScrapeResponse) Accept() []byte {
+	pkt := make([]byte, 8+len(sr.Stats)*12)
+	binary.BigEndian.PutUint32(pkt, 2)
+	copy(pkt[4:8], sr.TransactionID)
+	for i, s := range sr.Stats {
+		start := 8 + 12*i
+		binary.BigEndian.PutUint32(pkt[start:start+4], uint32(s.Complete))
+		binary.BigEndian.PutUint32(pkt[start+4:start+8], uint32(s.Downloaded))
+		binary.BigEndian.PutUint32(pkt[start+8:start+12], uint32(s.Incomplete))
+	}
+	return pkt
+}
+
+func (sr *ScrapeResponse) Error(msg string) []byte {
+	return makeGenericErrorPacket(msg, sr.TransactionID)
 }
 
 func makeGenericErrorPacket(msg string, transactionID []byte) []byte {

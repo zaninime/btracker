@@ -56,7 +56,9 @@ func processConnectionRequest(conn *net.UDPConn, addr *net.UDPAddr, pv *udp.Prot
 			mainLogger.Error("couldn't write connection id to the database", "err", err)
 		}
 		response.ConnectionID = connID
-		conn.WriteToUDP(response.Accept(), addr)
+		// TODO: improve here
+		n, _ := conn.WriteToUDP(response.Accept(), addr)
+		mainLogger.Debug("responding normally", "len", n)
 		return
 	}
 	conn.WriteToUDP(response.Error("Too fast, try again later"), addr)
@@ -124,7 +126,10 @@ func processAnnounceRequest(conn *net.UDPConn, addr *net.UDPAddr, pv *udp.Protoc
 		if err2 := db.InsertPeer(peer); err2 != nil {
 			return
 		}
-		// update torrent stats here
+		db.IncrementTorrentDownloadedStats(pv.InfoHashes[0])
+		if pv.Event == udp.EventCompleted {
+			db.IncrementTorrentCompletedStats(pv.InfoHashes[0])
+		}
 		return
 	} else if err != nil {
 		return
@@ -143,7 +148,27 @@ func processAnnounceRequest(conn *net.UDPConn, addr *net.UDPAddr, pv *udp.Protoc
 	if err := db.UpdatePeer(peer); err != nil {
 		return
 	}
+	if pv.Event == udp.EventCompleted {
+		db.IncrementTorrentCompletedStats(pv.InfoHashes[0])
+	}
 }
 
 func processScrapeRequest(conn *net.UDPConn, addr *net.UDPAddr, pv *udp.ProtocolVars) {
+	response := udp.ScrapeResponse{pv.TransactionID, make([]udp.TorrentStats, 0, len(pv.InfoHashes))}
+	for _, hash := range pv.InfoHashes {
+		var stat *udp.TorrentStats
+		var err error
+		if stat, err = db.GetTorrentStats(hash); err != nil {
+			mainLogger.Debug("responding with error", "msg", "Internal error")
+			conn.WriteToUDP(response.Error("Internal error"), addr)
+			return
+		}
+		response.Stats = append(response.Stats, *stat)
+	}
+	n, err := conn.WriteToUDP(response.Accept(), addr)
+	if err != nil {
+		mainLogger.Error("couldn't write to socket", "err", err)
+		return
+	}
+	mainLogger.Debug("responding normally", "len", n)
 }

@@ -3,7 +3,7 @@
 package udp
 
 import (
-  "fmt"
+  //"fmt"
   "net"
   "bytes"
   "encoding/binary"
@@ -1604,7 +1604,7 @@ tr136:
 
 //line parser.rl:131
 
-  fmt.Printf("%+v\n", protocolVars)
+  //fmt.Printf("%+v\n", protocolVars)
 
   if !valid {
     return nil
