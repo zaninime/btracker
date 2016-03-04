@@ -2,9 +2,6 @@ package db
 
 import (
 	"database/sql"
-	"encoding/base64"
-	"net"
-	"time"
 
 	"github.com/jmoiron/sqlx"
 )
@@ -25,31 +22,31 @@ var (
 		`INSERT INTO "public"."connection" ("id", "ip", "expiry") VALUES (decode($1, 'base64'), $2, $3)`,
 		nil,
 	}
-	StmtCheckConnectionID = preparedStmt{
+	stmtCheckConnectionID = preparedStmt{
 		`SELECT "ip" FROM "public"."connection" WHERE id = decode($1, 'base64') AND ip = $2 AND expiry >= $3`,
 		nil,
 	}
-	StmtGetPeers = preparedStmt{
-		`SELECT "ip", "port" FROM "public"."peer" WHERE id = decode($1, 'base64') AND torrent_id = decode($2, 'base64') AND "state" > 0 LIMIT $3`,
+	stmtGetPeers = preparedStmt{
+		`SELECT "ip", "port" FROM "public"."peer" WHERE id != decode($1, 'base64') AND torrent_id = decode($2, 'base64') AND "state" > 0 LIMIT $3`,
 		nil,
 	}
-	StmtGetLeecherPeers = preparedStmt{
+	stmtGetLeecherPeers = preparedStmt{
 		`SELECT COUNT(*) FROM "public"."peer" WHERE torrent_id = decode($1, 'base64') AND "left" > 0`,
 		nil,
 	}
-	StmtGetSeederPeers = preparedStmt{
+	stmtGetSeederPeers = preparedStmt{
 		`SELECT COUNT(*) FROM "public"."peer" WHERE torrent_id = decode($1, 'base64') AND "left" = 0`,
 		nil,
 	}
-	StmtGetPeer = preparedStmtx{
+	stmtGetPeer = preparedStmtx{
 		`SELECT * FROM "public"."peer" WHERE id = decode($1, 'base64') AND torrent_id = decode($2, 'base64')`,
 		nil,
 	}
-	StmtInsertNewPeer = preparedStmt{
+	stmtInsertNewPeer = preparedStmt{
 		`INSERT INTO "public"."peer" ("id", "torrent_id", "state", "ip", "port", "downloaded", "uploaded", "left") VALUES (decode($1, 'base64'), decode($2, 'base64'), $3, $4, $5, $6, $7, $8)`,
 		nil,
 	}
-	StmtUpdatePeer = preparedStmt{
+	stmtUpdatePeer = preparedStmt{
 		`UPDATE "public"."peer" SET "state" = $3, "ip" = $4, "port" = $5, "downloaded" = $6, "uploaded" = $7, "left" = $8, "last_updated" = NOW() WHERE id = decode($1, 'base64') AND torrent_id = decode($2, 'base64')`,
 		nil,
 	}
@@ -63,60 +60,46 @@ func prepareStatements() error {
 		return err
 	}
 
-	StmtCheckConnectionID.Stmt, err = DB.Prepare(StmtCheckConnectionID.String)
+	stmtCheckConnectionID.Stmt, err = DB.Prepare(stmtCheckConnectionID.String)
 	if err != nil {
-		logger.Error("error while preparing StmtCheckConnectionID", "err", err)
+		logger.Error("error while preparing stmtCheckConnectionID", "err", err)
 		return err
 	}
 
-	StmtGetPeers.Stmt, err = DB.Prepare(StmtGetPeers.String)
+	stmtGetPeers.Stmt, err = DB.Prepare(stmtGetPeers.String)
 	if err != nil {
-		logger.Error("error while preparing StmtGetPeers", "err", err)
+		logger.Error("error while preparing stmtGetPeers", "err", err)
 		return err
 	}
 
-	StmtGetLeecherPeers.Stmt, err = DB.Prepare(StmtGetLeecherPeers.String)
+	stmtGetLeecherPeers.Stmt, err = DB.Prepare(stmtGetLeecherPeers.String)
 	if err != nil {
-		logger.Error("error while preparing StmtGetLeecherPeers", "err", err)
+		logger.Error("error while preparing stmtGetLeecherPeers", "err", err)
 		return err
 	}
 
-	StmtGetSeederPeers.Stmt, err = DB.Prepare(StmtGetSeederPeers.String)
+	stmtGetSeederPeers.Stmt, err = DB.Prepare(stmtGetSeederPeers.String)
 	if err != nil {
-		logger.Error("error while preparing StmtGetSeederPeers", "err", err)
+		logger.Error("error while preparing stmtGetSeederPeers", "err", err)
 		return err
 	}
 
-	StmtGetPeer.Stmt, err = DB.Preparex(StmtGetPeer.String)
+	stmtGetPeer.Stmt, err = DB.Preparex(stmtGetPeer.String)
 	if err != nil {
-		logger.Error("error while preparing StmtGetPeer", "err", err)
+		logger.Error("error while preparing stmtGetPeer", "err", err)
 		return err
 	}
 
-	StmtInsertNewPeer.Stmt, err = DB.Prepare(StmtInsertNewPeer.String)
+	stmtInsertNewPeer.Stmt, err = DB.Prepare(stmtInsertNewPeer.String)
 	if err != nil {
-		logger.Error("error while preparing StmtInsertNewPeer", "err", err)
+		logger.Error("error while preparing stmtInsertNewPeer", "err", err)
 		return err
 	}
 
-	StmtUpdatePeer.Stmt, err = DB.Prepare(StmtUpdatePeer.String)
+	stmtUpdatePeer.Stmt, err = DB.Prepare(stmtUpdatePeer.String)
 	if err != nil {
-		logger.Error("error while preparing StmtUpdatePeer", "err", err)
+		logger.Error("error while preparing stmtUpdatePeer", "err", err)
 		return err
 	}
 	return nil
-}
-
-// CheckConnectionID queries the database for connection id validity
-func CheckConnectionID(connectionID []byte, addr net.IP) (bool, error) {
-	var ipAddr string
-	logger.Debug("running query", "q", StmtCheckConnectionID.String, "connectionID", connectionID, "addr", addr.String())
-	err := StmtCheckConnectionID.Stmt.QueryRow(base64.StdEncoding.EncodeToString(connectionID), addr.String(), time.Now()).Scan(&ipAddr)
-	if err != nil {
-		if err == sql.ErrNoRows {
-			return false, nil
-		}
-		return false, err
-	}
-	return true, nil
 }

@@ -7,7 +7,6 @@ import (
 	"net"
 	"time"
 
-	"github.com/lib/pq"
 	"github.com/zaninime/btracker/db"
 	"github.com/zaninime/btracker/udp"
 )
@@ -38,6 +37,9 @@ func processPkt(conn *net.UDPConn, addr *net.UDPAddr, data []byte) {
 	case udp.ActionAnnounce:
 		mainLogger.Debug("processing announce")
 		processAnnounceRequest(conn, addr, pv)
+	case udp.ActionScrape:
+		mainLogger.Debug("processing scrape")
+		processScrapeRequest(conn, addr, pv)
 	}
 }
 
@@ -62,139 +64,86 @@ func processConnectionRequest(conn *net.UDPConn, addr *net.UDPAddr, pv *udp.Prot
 
 func processAnnounceRequest(conn *net.UDPConn, addr *net.UDPAddr, pv *udp.ProtocolVars) {
 	mainLogger.Debug("got an announce request", "torrent", pv.InfoHashes[0], "peer", pv.PeerID)
-	response := udp.AnnounceResponse{pv.TransactionID, int32(config.Tracker.Interval), 0, 0, nil}
+	response := udp.AnnounceResponse{pv.TransactionID, int32(config.Tracker.Interval), 0, 0, []udp.Peer{}}
 	status, err := db.CheckConnectionID(pv.ConnectionID, addr.IP)
 	if err != nil {
-		mainLogger.Error("couldn't query the database for connection id", "err", err)
+		mainLogger.Debug("responding with error", "msg", "Internal error")
 		conn.WriteToUDP(response.Error("Internal error"), addr)
 		return
 	}
 	if !status {
-		mainLogger.Debug("connection id is invalid")
-		conn.WriteToUDP(response.Error("Invalid connection id"), addr)
+		mainLogger.Debug("connection ID is invalid, responding with error", "msg", "Invalid connection ID")
+		conn.WriteToUDP(response.Error("Invalid connection ID"), addr)
 		return
 	}
-	mainLogger.Debug("connection id is valid")
+	mainLogger.Debug("connection ID is valid")
 
 	if pv.RequestedResults == -1 {
 		pv.RequestedResults = 2147483647
-	} else if pv.RequestedResults == 0 {
-		response.Peers = []udp.Peer{}
-		conn.WriteToUDP(response.Accept(), addr)
-		return
+	} else if pv.RequestedResults > 1 {
+		mainLogger.Debug("requesting peers data from database")
+		if err := db.PopulatePeersFields(&response, pv.PeerID, pv.InfoHashes[0], pv.RequestedResults); err != nil {
+			mainLogger.Debug("responding with error", "msg", "Internal error")
+			conn.WriteToUDP(response.Error("Internal error"), addr)
+		}
 	}
-	mainLogger.Debug("running query", "q", db.StmtGetPeers.String)
-	result, err := db.StmtGetPeers.Stmt.Query(base64.StdEncoding.EncodeToString(pv.PeerID), base64.StdEncoding.EncodeToString(pv.InfoHashes[0]), pv.RequestedResults)
-	defer result.Close()
+	n, err := conn.WriteToUDP(response.Accept(), addr)
 	if err != nil {
-		if err == sql.ErrNoRows {
-			response.Peers = []udp.Peer{}
-			conn.WriteToUDP(response.Accept(), addr)
-			return
-		}
-		mainLogger.Error("couldn't query the database for peers", "err", err)
-		conn.WriteToUDP(response.Error("Internal error"), addr)
-		return
+		mainLogger.Error("couldn't write to socket", "err", err)
 	}
-	response.Peers = []udp.Peer{}
-	for result.Next() {
-		var ipString string
-		var port uint16
-		err := result.Scan(&ipString, &port)
-		if err != nil {
-			mainLogger.Error("couldn't scan results", "err", err)
-		}
-		ip := net.ParseIP(ipString)
-		response.Peers = append(response.Peers, udp.Peer{IP: ip, Port: port})
-	}
-	mainLogger.Debug("running query", "q", db.StmtGetLeecherPeers.String)
-	if err := db.StmtGetLeecherPeers.Stmt.QueryRow(base64.StdEncoding.EncodeToString(pv.InfoHashes[0])).Scan(&response.Leechers); err != nil {
-		mainLogger.Error("couldn't query the database for leechers", "err", err)
-		conn.WriteToUDP(response.Error("Internal error"), addr)
-		return
-	}
-	mainLogger.Debug("running query", "q", db.StmtGetSeederPeers.String)
-	if err := db.StmtGetSeederPeers.Stmt.QueryRow(base64.StdEncoding.EncodeToString(pv.InfoHashes[0])).Scan(&response.Seeders); err != nil {
-		mainLogger.Error("couldn't query the database for seeders", "err", err)
-		conn.WriteToUDP(response.Error("Internal error"), addr)
-		return
-	}
-	conn.WriteToUDP(response.Accept(), addr)
+	mainLogger.Debug("responding normally", "len", n)
 
 	// update database
-	var peer struct {
-		ID          []byte    `db:"id"`
-		TorrentID   []byte    `db:"torrent_id"`
-		State       int       `db:"state"`
-		IP          string    `db:"ip"`
-		Port        uint16    `db:"port"`
-		Downloaded  int32     `db:"downloaded"`
-		Uploaded    int32     `db:"uploaded"`
-		Left        int32     `db:"left"`
-		LastUpdated time.Time `db:"last_updated"`
-	}
-	mainLogger.Debug("running query", "q", db.StmtGetPeer.String)
-	if err := db.StmtGetPeer.Stmt.QueryRowx(base64.StdEncoding.EncodeToString(pv.PeerID), base64.StdEncoding.EncodeToString(pv.InfoHashes[0])).StructScan(&peer); err != nil {
-		if err == sql.ErrNoRows {
-
-			var peerState int
-			switch pv.Event {
-			case udp.EventStarted:
-				peerState = 1
-			case udp.EventStopped:
-				peerState = 0
-			case udp.EventCompleted:
-				peerState = 2
-			default:
-				peerState = 1
-			}
-			if pv.IPAddress == nil {
-				pv.IPAddress = addr.IP
-			}
-			if pv.Port == 0 {
-				pv.Port = uint16(addr.Port)
-			}
-			mainLogger.Debug("new peer, running query",
-				"q", db.StmtInsertNewPeer.String,
-				"id", base64.StdEncoding.EncodeToString(pv.PeerID),
-				"torrent_id", base64.StdEncoding.EncodeToString(pv.InfoHashes[0]),
-				"state", peerState,
-				"ip", pv.IPAddress.String(),
-				"port", pv.Port,
-				"downloaded", pv.DownloadedBytes,
-				"uploaded", pv.UploadedBytes,
-				"left", pv.LeftBytes,
-			)
-			if _, err2 := db.StmtInsertNewPeer.Stmt.Exec(base64.StdEncoding.EncodeToString(pv.PeerID),
-				base64.StdEncoding.EncodeToString(pv.InfoHashes[0]),
-				peerState,
-				pv.IPAddress.String(),
-				pv.Port,
-				pv.DownloadedBytes,
-				pv.UploadedBytes,
-				pv.LeftBytes); err2 != nil {
-				mainLogger.Error("couldn't insert peer into database", "err", err)
-				pqErr, ok := err2.(*pq.Error)
-				if ok {
-					mainLogger.Warn("postgres returned an error", "err", pqErr)
-				}
-
-			}
+	mainLogger.Debug("getting peer from database")
+	var peer *db.Peer
+	peer, err = db.GetPeer(pv.PeerID, pv.InfoHashes[0])
+	if err == sql.ErrNoRows || (peer == nil && err == nil) {
+		// peer not found inside database, creating one
+		mainLogger.Debug("peer not present, creating")
+		peerStates := map[udp.Event]int{
+			udp.EventStarted:   1,
+			udp.EventStopped:   0,
+			udp.EventCompleted: 2,
+			udp.EventNone:      1,
+		}
+		if pv.IPAddress == nil {
+			pv.IPAddress = addr.IP
+		}
+		peer = &db.Peer{
+			ID:          pv.PeerID,
+			TorrentID:   pv.InfoHashes[0],
+			State:       peerStates[pv.Event],
+			IP:          pv.IPAddress.String(),
+			Port:        pv.Port,
+			Downloaded:  pv.DownloadedBytes,
+			Uploaded:    pv.UploadedBytes,
+			Left:        pv.LeftBytes,
+			LastUpdated: time.Now(),
+		}
+		mainLogger.Debug("adding peer")
+		if err2 := db.InsertPeer(peer); err2 != nil {
 			return
 		}
-		mainLogger.Error("couldn't query database for peer", "err", err)
+		// update torrent stats here
+		return
+	} else if err != nil {
 		return
 	}
-	switch pv.Event {
-	case udp.EventStarted:
-		peer.State = 1
-	case udp.EventStopped:
-		peer.State = 0
-	case udp.EventCompleted:
-		peer.State = 2
+	peerStates := map[udp.Event]int{
+		udp.EventStarted:   1,
+		udp.EventStopped:   0,
+		udp.EventCompleted: 2,
+		udp.EventNone:      peer.State,
 	}
-	if _, err := db.StmtUpdatePeer.Stmt.Exec(base64.StdEncoding.EncodeToString(peer.ID), base64.StdEncoding.EncodeToString(peer.TorrentID), peer.State, peer.IP, peer.Port, peer.Downloaded, peer.Uploaded, peer.Left); err != nil {
-		mainLogger.Error("couldn't update peer inside database", "err", err)
+	peer.State = peerStates[pv.Event]
+	peer.Downloaded = pv.DownloadedBytes
+	peer.Uploaded = pv.UploadedBytes
+	peer.Left = pv.LeftBytes
+	mainLogger.Debug("updating peer")
+	if err := db.UpdatePeer(peer); err != nil {
 		return
 	}
+}
+
+func processScrapeRequest(conn *net.UDPConn, addr *net.UDPAddr, pv *udp.ProtocolVars) {
 }
