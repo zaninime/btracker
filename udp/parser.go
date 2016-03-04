@@ -3,25 +3,26 @@
 package udp
 
 import (
+  "fmt"
   "net"
   "bytes"
   "encoding/binary"
 )
 
 
-//line parser.rl:111
+//line parser.rl:112
 
 
 
-//line parser.go:17
+//line parser.go:18
 const torrent_start int = 1
-const torrent_first_final int = 140
+const torrent_first_final int = 138
 const torrent_error int = 0
 
 const torrent_en_main int = 1
 
 
-//line parser.rl:114
+//line parser.rl:115
 
 func Parse(data []byte) *ProtocolVars {
   p := 0
@@ -37,14 +38,14 @@ func Parse(data []byte) *ProtocolVars {
   protocolVars := ProtocolVars{}
 
   
-//line parser.go:41
+//line parser.go:42
 	{
 	cs = torrent_start
 	}
 
-//line parser.rl:129
+//line parser.rl:130
   
-//line parser.go:48
+//line parser.go:49
 	{
 	if p == pe {
 		goto _test_eof
@@ -248,12 +249,14 @@ func Parse(data []byte) *ProtocolVars {
 		goto st_case_97
 	case 98:
 		goto st_case_98
+	case 138:
+		goto st_case_138
+	case 139:
+		goto st_case_139
 	case 99:
 		goto st_case_99
 	case 100:
 		goto st_case_100
-	case 140:
-		goto st_case_140
 	case 101:
 		goto st_case_101
 	case 102:
@@ -298,12 +301,12 @@ func Parse(data []byte) *ProtocolVars {
 		goto st_case_121
 	case 122:
 		goto st_case_122
+	case 140:
+		goto st_case_140
 	case 123:
 		goto st_case_123
 	case 124:
 		goto st_case_124
-	case 141:
-		goto st_case_141
 	case 125:
 		goto st_case_125
 	case 126:
@@ -326,23 +329,19 @@ func Parse(data []byte) *ProtocolVars {
 		goto st_case_134
 	case 135:
 		goto st_case_135
+	case 141:
+		goto st_case_141
 	case 136:
 		goto st_case_136
 	case 137:
 		goto st_case_137
-	case 142:
-		goto st_case_142
-	case 138:
-		goto st_case_138
-	case 139:
-		goto st_case_139
 	}
 	goto st_out
 	st_case_1:
 		if data[p] == 0 {
 			goto st2
 		}
-		goto st139
+		goto st137
 	st2:
 		if p++; p == pe {
 			goto _test_eof2
@@ -351,14 +350,14 @@ func Parse(data []byte) *ProtocolVars {
 		if data[p] == 0 {
 			goto st3
 		}
-		goto st138
+		goto st136
 	st3:
 		if p++; p == pe {
 			goto _test_eof3
 		}
 	st_case_3:
 		if data[p] == 4 {
-			goto st125
+			goto st123
 		}
 		goto st4
 	st4:
@@ -401,7 +400,7 @@ func Parse(data []byte) *ProtocolVars {
 		}
 		goto st0
 tr11:
-//line parser.rl:38
+//line parser.rl:39
 
   protocolVars.ConnectionID = data[p-8:p]
 
@@ -411,7 +410,7 @@ tr11:
 			goto _test_eof10
 		}
 	st_case_10:
-//line parser.go:415
+//line parser.go:414
 		if data[p] == 0 {
 			goto st11
 		}
@@ -434,7 +433,7 @@ tr11:
 		case 1:
 			goto st13
 		case 2:
-			goto st101
+			goto st99
 		}
 		goto st0
 st_case_0:
@@ -448,7 +447,7 @@ st_case_0:
 	st_case_13:
 		goto tr17
 tr17:
-//line parser.rl:17
+//line parser.rl:18
 
   protocolVars.Action = ActionAnnounce
 
@@ -458,7 +457,7 @@ tr17:
 			goto _test_eof14
 		}
 	st_case_14:
-//line parser.go:462
+//line parser.go:461
 		goto st15
 	st15:
 		if p++; p == pe {
@@ -479,7 +478,7 @@ tr17:
 	st_case_17:
 		goto tr21
 tr21:
-//line parser.rl:35
+//line parser.rl:36
 
   protocolVars.TransactionID = data[p-4:p]
 
@@ -489,7 +488,7 @@ tr21:
 			goto _test_eof18
 		}
 	st_case_18:
-//line parser.go:493
+//line parser.go:492
 		goto st19
 	st19:
 		if p++; p == pe {
@@ -606,7 +605,7 @@ tr21:
 	st_case_37:
 		goto tr41
 tr41:
-//line parser.rl:41
+//line parser.rl:42
 
   protocolVars.InfoHashes = [][]byte{data[p-20:p]}
 
@@ -616,7 +615,7 @@ tr41:
 			goto _test_eof38
 		}
 	st_case_38:
-//line parser.go:620
+//line parser.go:619
 		goto st39
 	st39:
 		if p++; p == pe {
@@ -733,7 +732,7 @@ tr41:
 	st_case_57:
 		goto tr61
 tr61:
-//line parser.rl:44
+//line parser.rl:45
 
   protocolVars.PeerID = data[p-20:p]
 
@@ -743,7 +742,7 @@ tr61:
 			goto _test_eof58
 		}
 	st_case_58:
-//line parser.go:747
+//line parser.go:746
 		goto st59
 	st59:
 		if p++; p == pe {
@@ -788,7 +787,7 @@ tr61:
 	st_case_65:
 		goto tr69
 tr69:
-//line parser.rl:47
+//line parser.rl:48
 
   buf = bytes.NewReader(data[p-8:])
   err = binary.Read(buf, binary.BigEndian, &protocolVars.DownloadedBytes)
@@ -802,7 +801,7 @@ tr69:
 			goto _test_eof66
 		}
 	st_case_66:
-//line parser.go:806
+//line parser.go:805
 		goto st67
 	st67:
 		if p++; p == pe {
@@ -847,7 +846,7 @@ tr69:
 	st_case_73:
 		goto tr77
 tr77:
-//line parser.rl:54
+//line parser.rl:55
 
   err = binary.Read(buf, binary.BigEndian, &protocolVars.LeftBytes)
   if err != nil {
@@ -860,7 +859,7 @@ tr77:
 			goto _test_eof74
 		}
 	st_case_74:
-//line parser.go:864
+//line parser.go:863
 		goto st75
 	st75:
 		if p++; p == pe {
@@ -908,7 +907,7 @@ tr77:
 		}
 		goto st0
 tr85:
-//line parser.rl:60
+//line parser.rl:61
 
   err = binary.Read(buf, binary.BigEndian, &protocolVars.UploadedBytes)
   if err != nil {
@@ -921,7 +920,7 @@ tr85:
 			goto _test_eof82
 		}
 	st_case_82:
-//line parser.go:925
+//line parser.go:924
 		if data[p] == 0 {
 			goto st83
 		}
@@ -951,7 +950,7 @@ tr85:
 	st_case_85:
 		goto tr89
 tr89:
-//line parser.rl:66
+//line parser.rl:67
 
   switch data[p-1] {
   case 0:
@@ -970,7 +969,7 @@ tr89:
 			goto _test_eof86
 		}
 	st_case_86:
-//line parser.go:974
+//line parser.go:973
 		goto st87
 	st87:
 		if p++; p == pe {
@@ -991,7 +990,7 @@ tr89:
 	st_case_89:
 		goto tr93
 tr93:
-//line parser.rl:78
+//line parser.rl:79
 
   buf = bytes.NewReader(data[p-4:])
   err = binary.Read(buf, binary.BigEndian, &intIP)
@@ -1008,7 +1007,7 @@ tr93:
 			goto _test_eof90
 		}
 	st_case_90:
-//line parser.go:1012
+//line parser.go:1011
 		goto st91
 	st91:
 		if p++; p == pe {
@@ -1029,7 +1028,7 @@ tr93:
 	st_case_93:
 		goto tr97
 tr97:
-//line parser.rl:88
+//line parser.rl:89
 
   protocolVars.Key = data[p-4:p]
 
@@ -1039,7 +1038,7 @@ tr97:
 			goto _test_eof94
 		}
 	st_case_94:
-//line parser.go:1043
+//line parser.go:1042
 		goto st95
 	st95:
 		if p++; p == pe {
@@ -1060,7 +1059,7 @@ tr97:
 	st_case_97:
 		goto tr101
 tr101:
-//line parser.rl:91
+//line parser.rl:92
 
   buf = bytes.NewReader(data[p-4:])
   err = binary.Read(buf, binary.BigEndian, &protocolVars.RequestedResults)
@@ -1074,8 +1073,30 @@ tr101:
 			goto _test_eof98
 		}
 	st_case_98:
-//line parser.go:1078
-		goto st99
+//line parser.go:1077
+		goto st138
+	st138:
+		if p++; p == pe {
+			goto _test_eof138
+		}
+	st_case_138:
+		goto tr140
+tr140:
+//line parser.rl:99
+
+  err = binary.Read(buf, binary.BigEndian, &protocolVars.Port)
+  if err != nil {
+    panic(err)
+  }
+
+	goto st139
+	st139:
+		if p++; p == pe {
+			goto _test_eof139
+		}
+	st_case_139:
+//line parser.go:1099
+		goto st139
 	st99:
 		if p++; p == pe {
 			goto _test_eof99
@@ -1083,12 +1104,9 @@ tr101:
 	st_case_99:
 		goto tr103
 tr103:
-//line parser.rl:98
+//line parser.rl:21
 
-  err = binary.Read(buf, binary.BigEndian, &protocolVars.Port)
-  if err != nil {
-    panic(err)
-  }
+  protocolVars.Action = ActionScrape;
 
 	goto st100
 	st100:
@@ -1096,72 +1114,59 @@ tr103:
 			goto _test_eof100
 		}
 	st_case_100:
-//line parser.go:1100
-		goto st140
-	st140:
-		if p++; p == pe {
-			goto _test_eof140
-		}
-	st_case_140:
-		goto st140
+//line parser.go:1118
+		goto st101
 	st101:
 		if p++; p == pe {
 			goto _test_eof101
 		}
 	st_case_101:
-		goto tr105
-tr105:
-//line parser.rl:20
-
-  protocolVars.Action = ActionScrape;
-
-	goto st102
+		goto st102
 	st102:
 		if p++; p == pe {
 			goto _test_eof102
 		}
 	st_case_102:
-//line parser.go:1125
 		goto st103
 	st103:
 		if p++; p == pe {
 			goto _test_eof103
 		}
 	st_case_103:
-		goto st104
-	st104:
-		if p++; p == pe {
-			goto _test_eof104
-		}
-	st_case_104:
-		goto st105
-	st105:
-		if p++; p == pe {
-			goto _test_eof105
-		}
-	st_case_105:
-		goto tr109
-tr109:
-//line parser.rl:35
+		goto tr107
+tr107:
+//line parser.rl:36
 
   protocolVars.TransactionID = data[p-4:p]
 
-	goto st106
+	goto st104
 tr142:
-//line parser.rl:24
+//line parser.rl:25
 
   if protocolVars.InfoHashes == nil {
     protocolVars.InfoHashes = make([][]byte, 0, 74)
   }
   protocolVars.InfoHashes = append(protocolVars.InfoHashes, data[p-20:p])
 
-	goto st106
+	goto st104
+	st104:
+		if p++; p == pe {
+			goto _test_eof104
+		}
+	st_case_104:
+//line parser.go:1158
+		goto st105
+	st105:
+		if p++; p == pe {
+			goto _test_eof105
+		}
+	st_case_105:
+		goto st106
 	st106:
 		if p++; p == pe {
 			goto _test_eof106
 		}
 	st_case_106:
-//line parser.go:1165
 		goto st107
 	st107:
 		if p++; p == pe {
@@ -1258,93 +1263,104 @@ tr142:
 			goto _test_eof122
 		}
 	st_case_122:
-		goto st123
+		goto st140
+	st140:
+		if p++; p == pe {
+			goto _test_eof140
+		}
+	st_case_140:
+		goto tr142
 	st123:
 		if p++; p == pe {
 			goto _test_eof123
 		}
 	st_case_123:
-		goto st124
+		if data[p] == 23 {
+			goto st124
+		}
+		goto st5
 	st124:
 		if p++; p == pe {
 			goto _test_eof124
 		}
 	st_case_124:
-		goto st141
-	st141:
-		if p++; p == pe {
-			goto _test_eof141
+		if data[p] == 39 {
+			goto st125
 		}
-	st_case_141:
-		goto tr142
+		goto st6
 	st125:
 		if p++; p == pe {
 			goto _test_eof125
 		}
 	st_case_125:
-		if data[p] == 23 {
+		if data[p] == 16 {
 			goto st126
 		}
-		goto st5
+		goto st7
 	st126:
 		if p++; p == pe {
 			goto _test_eof126
 		}
 	st_case_126:
-		if data[p] == 39 {
+		if data[p] == 25 {
 			goto st127
 		}
-		goto st6
+		goto st8
 	st127:
 		if p++; p == pe {
 			goto _test_eof127
 		}
 	st_case_127:
-		if data[p] == 16 {
+		if data[p] == 128 {
 			goto st128
 		}
-		goto st7
+		goto st9
 	st128:
 		if p++; p == pe {
 			goto _test_eof128
 		}
 	st_case_128:
-		if data[p] == 25 {
-			goto st129
+		if data[p] == 0 {
+			goto tr132
 		}
-		goto st8
+		goto st0
+tr132:
+//line parser.rl:39
+
+  protocolVars.ConnectionID = data[p-8:p]
+
+	goto st129
 	st129:
 		if p++; p == pe {
 			goto _test_eof129
 		}
 	st_case_129:
-		if data[p] == 128 {
+//line parser.go:1339
+		if data[p] == 0 {
 			goto st130
 		}
-		goto st9
+		goto st0
 	st130:
 		if p++; p == pe {
 			goto _test_eof130
 		}
 	st_case_130:
 		if data[p] == 0 {
-			goto tr134
+			goto st131
 		}
 		goto st0
-tr134:
-//line parser.rl:38
-
-  protocolVars.ConnectionID = data[p-8:p]
-
-	goto st131
 	st131:
 		if p++; p == pe {
 			goto _test_eof131
 		}
 	st_case_131:
-//line parser.go:1346
-		if data[p] == 0 {
+		switch data[p] {
+		case 0:
 			goto st132
+		case 1:
+			goto st13
+		case 2:
+			goto st99
 		}
 		goto st0
 	st132:
@@ -1352,73 +1368,50 @@ tr134:
 			goto _test_eof132
 		}
 	st_case_132:
-		if data[p] == 0 {
-			goto st133
-		}
-		goto st0
+		goto tr136
+tr136:
+//line parser.rl:15
+
+  protocolVars.Action = ActionConnectionRequest
+
+	goto st133
 	st133:
 		if p++; p == pe {
 			goto _test_eof133
 		}
 	st_case_133:
-		switch data[p] {
-		case 0:
-			goto st134
-		case 1:
-			goto st13
-		case 2:
-			goto st101
-		}
-		goto st0
+//line parser.go:1384
+		goto st134
 	st134:
 		if p++; p == pe {
 			goto _test_eof134
 		}
 	st_case_134:
-		goto tr138
-tr138:
-//line parser.rl:14
-
-  protocolVars.Action = ActionConnectionRequest
-
-	goto st135
+		goto st135
 	st135:
 		if p++; p == pe {
 			goto _test_eof135
 		}
 	st_case_135:
-//line parser.go:1391
-		goto st136
+		goto st141
+	st141:
+		if p++; p == pe {
+			goto _test_eof141
+		}
+	st_case_141:
+		goto st0
 	st136:
 		if p++; p == pe {
 			goto _test_eof136
 		}
 	st_case_136:
-		goto st137
+		goto st4
 	st137:
 		if p++; p == pe {
 			goto _test_eof137
 		}
 	st_case_137:
-		goto st142
-	st142:
-		if p++; p == pe {
-			goto _test_eof142
-		}
-	st_case_142:
-		goto st0
-	st138:
-		if p++; p == pe {
-			goto _test_eof138
-		}
-	st_case_138:
-		goto st4
-	st139:
-		if p++; p == pe {
-			goto _test_eof139
-		}
-	st_case_139:
-		goto st138
+		goto st136
 	st_out:
 	_test_eof2: cs = 2; goto _test_eof
 	_test_eof3: cs = 3; goto _test_eof
@@ -1517,9 +1510,10 @@ tr138:
 	_test_eof96: cs = 96; goto _test_eof
 	_test_eof97: cs = 97; goto _test_eof
 	_test_eof98: cs = 98; goto _test_eof
+	_test_eof138: cs = 138; goto _test_eof
+	_test_eof139: cs = 139; goto _test_eof
 	_test_eof99: cs = 99; goto _test_eof
 	_test_eof100: cs = 100; goto _test_eof
-	_test_eof140: cs = 140; goto _test_eof
 	_test_eof101: cs = 101; goto _test_eof
 	_test_eof102: cs = 102; goto _test_eof
 	_test_eof103: cs = 103; goto _test_eof
@@ -1542,9 +1536,9 @@ tr138:
 	_test_eof120: cs = 120; goto _test_eof
 	_test_eof121: cs = 121; goto _test_eof
 	_test_eof122: cs = 122; goto _test_eof
+	_test_eof140: cs = 140; goto _test_eof
 	_test_eof123: cs = 123; goto _test_eof
 	_test_eof124: cs = 124; goto _test_eof
-	_test_eof141: cs = 141; goto _test_eof
 	_test_eof125: cs = 125; goto _test_eof
 	_test_eof126: cs = 126; goto _test_eof
 	_test_eof127: cs = 127; goto _test_eof
@@ -1556,51 +1550,61 @@ tr138:
 	_test_eof133: cs = 133; goto _test_eof
 	_test_eof134: cs = 134; goto _test_eof
 	_test_eof135: cs = 135; goto _test_eof
+	_test_eof141: cs = 141; goto _test_eof
 	_test_eof136: cs = 136; goto _test_eof
 	_test_eof137: cs = 137; goto _test_eof
-	_test_eof142: cs = 142; goto _test_eof
-	_test_eof138: cs = 138; goto _test_eof
-	_test_eof139: cs = 139; goto _test_eof
 
 	_test_eof: {}
 	if p == eof {
 		switch cs {
-		case 140:
-//line parser.rl:31
+		case 139:
+//line parser.rl:32
 
   valid = true
 
-		case 141:
-//line parser.rl:24
+		case 140:
+//line parser.rl:25
 
   if protocolVars.InfoHashes == nil {
     protocolVars.InfoHashes = make([][]byte, 0, 74)
   }
   protocolVars.InfoHashes = append(protocolVars.InfoHashes, data[p-20:p])
 
-//line parser.rl:31
+//line parser.rl:32
 
   valid = true
 
-		case 142:
-//line parser.rl:35
+		case 141:
+//line parser.rl:36
 
   protocolVars.TransactionID = data[p-4:p]
 
-//line parser.rl:31
+//line parser.rl:32
 
   valid = true
 
-//line parser.go:1595
+		case 138:
+//line parser.rl:99
+
+  err = binary.Read(buf, binary.BigEndian, &protocolVars.Port)
+  if err != nil {
+    panic(err)
+  }
+
+//line parser.rl:32
+
+  valid = true
+
+//line parser.go:1599
 		}
 	}
 
 	_out: {}
 	}
 
-//line parser.rl:130
+//line parser.rl:131
 
-  //fmt.Printf("%+v\n", protocolVars)
+  fmt.Printf("%+v\n", protocolVars)
 
   if !valid {
     return nil

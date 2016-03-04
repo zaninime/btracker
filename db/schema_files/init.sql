@@ -7,7 +7,7 @@ CREATE TABLE "public"."torrent" (
 
 CREATE TABLE "public"."peer" (
   "id" bytea NOT NULL,
-  "torrent_id" bytea REFERENCES "torrent"("hash") NOT NULL,
+  "torrent_id" bytea NOT NULL,
   "state" integer NOT NULL,
   "ip" inet NOT NULL,
   "port" integer NOT NULL,

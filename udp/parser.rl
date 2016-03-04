@@ -1,6 +1,7 @@
 package udp
 
 import (
+  "fmt"
   "net"
   "bytes"
   "encoding/binary"
@@ -101,7 +102,7 @@ port = any{2} %{
     panic(err)
   }
 };
-extensions = any{2};
+extensions = any{2}?;
 
 connection_request = protocol_id . actionf_connect . transaction_id;
 announce = connection_id . actionf_announce . transaction_id . info_hash . peer_id . downloaded_bytes . left_bytes . uploaded_bytes . event . ip_address . client_key . results_count . port . extensions . any*;
@@ -128,7 +129,7 @@ func Parse(data []byte) *ProtocolVars {
   %% write init;
   %% write exec;
 
-  //fmt.Printf("%+v\n", protocolVars)
+  fmt.Printf("%+v\n", protocolVars)
 
   if !valid {
     return nil

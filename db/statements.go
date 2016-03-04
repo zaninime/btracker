@@ -34,11 +34,11 @@ var (
 		nil,
 	}
 	StmtGetLeecherPeers = preparedStmt{
-		`SELECT COUNT(*) FROM "public"."peer" WHERE torrent_id = decode($1, 'base64') AND "state" = 1`,
+		`SELECT COUNT(*) FROM "public"."peer" WHERE torrent_id = decode($1, 'base64') AND "left" > 0`,
 		nil,
 	}
 	StmtGetSeederPeers = preparedStmt{
-		`SELECT COUNT(*) FROM "public"."peer" WHERE torrent_id = decode($1, 'base64') AND "state" = 2`,
+		`SELECT COUNT(*) FROM "public"."peer" WHERE torrent_id = decode($1, 'base64') AND "left" = 0`,
 		nil,
 	}
 	StmtGetPeer = preparedStmtx{
@@ -107,6 +107,7 @@ func prepareStatements() error {
 	return nil
 }
 
+// CheckConnectionID queries the database for connection id validity
 func CheckConnectionID(connectionID []byte, addr net.IP) (bool, error) {
 	var ipAddr string
 	logger.Debug("running query", "q", StmtCheckConnectionID.String, "connectionID", connectionID, "addr", addr.String())

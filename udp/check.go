@@ -11,11 +11,10 @@ func checkAnnouncePkt(pv *ProtocolVars) *ProtocolVars {
 		return nil
 	}
 
-	if pv.RequestedResults < 1 && pv.RequestedResults != -1 {
+	if pv.RequestedResults < -1 {
 		return nil
 	}
 
-	// cesco: not super sure about this, maybe it's "use the port you got the packet from"
 	if pv.Port == 0 {
 		return nil
 	}
