@@ -1,3 +1,10 @@
-# btracker: open source tracker for the BitTorrent protocol
+# btracker: an open source BitTorrent tracker
+## ...written in Go
 
-This project is under active development.
+This program is still under active development.
+
+## License
+Please find a copy of the license inside the `LICENSE` file.
+
+-------------
+Copyright (C) 2016 Francesco Zanini.
