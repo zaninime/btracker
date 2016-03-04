@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net"
 	"os"
+	"time"
 
 	"github.com/BurntSushi/toml"
 	"github.com/jasonlvhit/gocron"
@@ -88,7 +89,7 @@ func main() {
 	// cron scheduler
 	s := gocron.NewScheduler()
 	s.Every(2).Minutes().Do(db.ClearConnections)
-	s.Every(30).Minutes().Do(db.ClearPeers, 1200)
+	s.Every(30).Minutes().Do(db.ClearPeers, time.Duration(1200))
 	go cron(s)
 
 	// setup socket
