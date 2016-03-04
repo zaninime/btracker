@@ -18,7 +18,7 @@ var (
 	exampleMode = kingpin.Flag("template", "Prints a configuration file template with comments.").Short('e').Bool()
 )
 
-const version = "0.0.1"
+const version = "0.9.0"
 
 var mainLogger log.Logger
 
