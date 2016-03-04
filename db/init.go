@@ -50,20 +50,20 @@ func InitializeDatabaseConnection(config Config) error {
 	DB.SetMaxIdleConns(config.IdleConn)
 	DB.SetMaxOpenConns(config.MaxConn)
 
-	// cleanup immediately
-	if err = ClearConnections(); err != nil {
-		return err
-	}
-	if err = ClearPeers(3600); err != nil {
-		return err
-	}
-
 	// start pinging
 	startPing()
 
 	// go verify and update schema
 	err = checkAndUpdateSchema()
 	if err != nil {
+		return err
+	}
+
+	// cleanup immediately
+	if err = ClearConnections(); err != nil {
+		return err
+	}
+	if err = ClearPeers(3600); err != nil {
 		return err
 	}
 
