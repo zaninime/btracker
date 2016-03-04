@@ -127,9 +127,6 @@ func processAnnounceRequest(conn *net.UDPConn, addr *net.UDPAddr, pv *udp.Protoc
 			return
 		}
 		db.IncrementTorrentDownloadedStats(pv.InfoHashes[0])
-		if pv.Event == udp.EventCompleted {
-			db.IncrementTorrentCompletedStats(pv.InfoHashes[0])
-		}
 		return
 	} else if err != nil {
 		return
@@ -147,9 +144,6 @@ func processAnnounceRequest(conn *net.UDPConn, addr *net.UDPAddr, pv *udp.Protoc
 	mainLogger.Debug("updating peer")
 	if err := db.UpdatePeer(peer); err != nil {
 		return
-	}
-	if pv.Event == udp.EventCompleted {
-		db.IncrementTorrentCompletedStats(pv.InfoHashes[0])
 	}
 }
 

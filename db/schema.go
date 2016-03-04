@@ -11,7 +11,6 @@ const lastSchemaVersion = 1
 const (
 	schemaInit = `CREATE TABLE "public"."torrent" (
 	  "hash" bytea PRIMARY KEY,
-	  "completed" integer NOT NULL DEFAULT 0,
 	  "downloaded" integer NOT NULL DEFAULT 0
 	);
 
@@ -45,10 +44,6 @@ const (
 	  key varchar PRIMARY KEY,
 	  value integer NOT NULL
 	);
-
-	-- \run\
-
-	CREATE INDEX ON "public"."torrent" ("hash");
 
 	-- \run\
 

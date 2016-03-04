@@ -51,7 +51,7 @@ var (
 		nil,
 	}
 	stmtGetTorrentStats = preparedStmt{
-		`SELECT "completed", "downloaded" FROM "public"."torrent" WHERE "hash" = decode($1, 'base64')`,
+		`SELECT "downloaded" FROM "public"."torrent" WHERE "hash" = decode($1, 'base64')`,
 		nil,
 	}
 )

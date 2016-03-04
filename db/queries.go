@@ -144,7 +144,12 @@ func UpdatePeer(peer *Peer) error {
 }
 
 func GetTorrentStats(torrentID []byte) (*udp.TorrentStats, error) {
-	var completed, downloaded, leechers int32
+	var seeders, downloaded, leechers int32
+	logger.Debug("running query", "q", stmtGetSeederPeers.String, "torrent_id", torrentID)
+	if err := stmtGetSeederPeers.Stmt.QueryRow(base64.StdEncoding.EncodeToString(torrentID)).Scan(&seeders); err != nil {
+		logger.Error("couldn't query the database for seeders", "err", err)
+		return nil, err
+	}
 	logger.Debug("running query", "q", stmtGetLeecherPeers.String, "torrent_id", torrentID)
 	if err := stmtGetLeecherPeers.Stmt.QueryRow(base64.StdEncoding.EncodeToString(torrentID)).Scan(&leechers); err != nil {
 		logger.Error("couldn't query the database for leechers", "err", err)
@@ -154,64 +159,21 @@ func GetTorrentStats(torrentID []byte) (*udp.TorrentStats, error) {
 		"q", stmtGetTorrentStats.String,
 		"torrent_id", base64.StdEncoding.EncodeToString(torrentID),
 	)
-	if err := stmtGetTorrentStats.Stmt.QueryRow(base64.StdEncoding.EncodeToString(torrentID)).Scan(&completed, &completed); err != nil {
+	if err := stmtGetTorrentStats.Stmt.QueryRow(base64.StdEncoding.EncodeToString(torrentID)).Scan(&downloaded); err != nil {
 		if err == sql.ErrNoRows {
-			return &udp.TorrentStats{0, 0, leechers}, nil
+			return &udp.TorrentStats{seeders, 0, leechers}, nil
 		}
 		logger.Error("couldn't retrieve torrent stats", "err", err)
 		return nil, err
 	}
-	return &udp.TorrentStats{completed, downloaded, leechers}, nil
-}
-
-func IncrementTorrentCompletedStats(torrentID []byte) error {
-	completed := 0
-	torrentIDBase64 := base64.StdEncoding.EncodeToString(torrentID)
-	getStmt := `SELECT "completed" FROM "public"."torrent" WHERE "hash" = decode($1, 'base64')`
-	insertStmt := `INSERT INTO "public"."torrent" VALUES (decode($1, 'base64'), 1)`
-	updateStmt := `UPDATE "public"."torrent" SET "completed" = $2 WHERE "hash" = decode($1, 'base64')`
-	logger.Debug("beginning transaction")
-	tx, err := DB.Begin()
-	if err != nil {
-		logger.Error("couldn't begin transaction", "err", err)
-		return err
-	}
-	logger.Debug("running query", "q", getStmt, "hash", torrentIDBase64)
-	if err = tx.QueryRow(getStmt, torrentIDBase64).Scan(&completed); err != nil {
-		if err == sql.ErrNoRows {
-			logger.Debug("running query", "q", insertStmt, "hash", torrentIDBase64)
-			if _, err = tx.Exec(insertStmt, torrentIDBase64); err != nil {
-				logger.Error("couldn't insert row into table torrent", "err", err)
-				tx.Rollback()
-				return err
-			}
-			if err = tx.Commit(); err != nil {
-				logger.Error("couldn't commit transaction", "err", err)
-			}
-			logger.Debug("new row inserted", "hash", torrentIDBase64)
-			return nil
-		}
-		logger.Error("couldn't read torrent stats from database", "err", err)
-		tx.Rollback()
-		return err
-	}
-	completed++
-	logger.Debug("running query", "q", updateStmt, "hash", torrentIDBase64, "completed", completed)
-	if _, err = tx.Exec(updateStmt, torrentIDBase64, completed); err != nil {
-		logger.Error("couldn't update torrent stats", "err", err)
-		tx.Rollback()
-		return err
-	}
-	logger.Debug("torrent stats updated", "hash", torrentIDBase64, "completed", completed)
-	tx.Commit()
-	return nil
+	return &udp.TorrentStats{seeders, downloaded, leechers}, nil
 }
 
 func IncrementTorrentDownloadedStats(torrentID []byte) error {
 	downloaded := 0
 	torrentIDBase64 := base64.StdEncoding.EncodeToString(torrentID)
 	getStmt := `SELECT "downloaded" FROM "public"."torrent" WHERE "hash" = decode($1, 'base64')`
-	insertStmt := `INSERT INTO "public"."torrent" VALUES (decode($1, 'base64'), 0, 1)`
+	insertStmt := `INSERT INTO "public"."torrent" VALUES (decode($1, 'base64'), 1)`
 	updateStmt := `UPDATE "public"."torrent" SET "downloaded" = $2 WHERE "hash" = decode($1, 'base64')`
 	logger.Debug("beginning transaction")
 	tx, err := DB.Begin()
