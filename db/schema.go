@@ -1,58 +1,12 @@
 package db
 
 import (
-	"strings"
+	"bytes"
 
 	"github.com/lib/pq"
 )
 
-const lastSchemaVersion = 1
-
-const (
-	schemaInit = `CREATE TABLE "public"."torrent" (
-	  "hash" bytea PRIMARY KEY,
-	  "downloaded" integer NOT NULL DEFAULT 0
-	);
-
-	-- \run\
-
-	CREATE TABLE "public"."peer" (
-	  "id" bytea NOT NULL,
-	  "torrent_id" bytea NOT NULL,
-	  "state" integer NOT NULL,
-	  "ip" inet NOT NULL,
-	  "port" integer NOT NULL,
-	  "downloaded" integer NOT NULL,
-	  "uploaded" integer NOT NULL,
-	  "left" integer NOT NULL,
-	  "last_updated" timestamp with time zone NOT NULL DEFAULT NOW(),
-	  PRIMARY KEY ("id", "torrent_id")
-	);
-
-	-- \run\
-
-	CREATE TABLE "public"."connection" (
-	  "id" bytea NOT NULL,
-	  "ip" inet NOT NULL,
-	  "expiry" timestamp with time zone NOT NULL,
-	  PRIMARY KEY ("id", "ip")
-	);
-
-	-- \run\
-
-	CREATE TABLE "public"."schema" (
-	  key varchar PRIMARY KEY,
-	  value integer NOT NULL
-	);
-
-	-- \run\
-
-	CREATE INDEX ON "public"."peer" ("id", "torrent_id", "state");
-
-	-- \run\
-
-	INSERT INTO "public"."schema" VALUES ('version', 1);`
-)
+const latestSchemaVersion = 2
 
 func checkAndUpdateSchema() error {
 	row := DB.QueryRow(`SELECT "value" FROM "public"."schema" WHERE "key"='version'`)
@@ -64,39 +18,70 @@ func checkAndUpdateSchema() error {
 			if pqErr.Code == "42P01" {
 				logger.Info("schema version not found, initializing schema")
 				if err = runSchemaInit(); err != nil {
-					logger.Fatal("cannot create schema", "err", err)
+					logger.Error("cannot create schema", "err", err)
+					return err
 				}
-				schemaVersion = lastSchemaVersion
+				schemaVersion = latestSchemaVersion
 			} else {
-				logger.Fatal("unexpected postgres error", "err", err)
+				logger.Error("unexpected postgres error", "err", err)
+				return err
 			}
 		} else {
-			logger.Fatal("unexpected error", "err", err)
+			logger.Error("unexpected error", "err", err)
+			return err
 		}
 	}
 
-	if schemaVersion < lastSchemaVersion {
-		logger.Info("schema version is old, upgrading is required")
+	if schemaVersion < latestSchemaVersion {
+		logger.Info("schema version is old, upgrading is required", "current", schemaVersion, "latest", latestSchemaVersion)
+		for schemaVersion < latestSchemaVersion {
+			err = updateSchema(schemaVersion)
+			if err != nil {
+				logger.Fatal("couldn't update database schema")
+				return err
+			}
+			schemaVersion++
+		}
 	} else {
-		logger.Debug("running the latest schema version")
+		logger.Debug("running the latest schema version", "version", schemaVersion)
 	}
 	return nil
 }
 
 func runSchemaInit() error {
-	logger.Debug("running schema initialization")
-	queries := strings.Split(schemaInit, "-- \\run\\")
-	tx := DB.MustBegin()
-	for _, q := range queries {
-		q = strings.TrimSpace(q)
-		logger.Debug("running query", "q", q)
-		_, err := tx.Exec(q)
+	logger.Debug("running schema initialization", "version", latestSchemaVersion)
+	return runTxQueries(MustAsset("init_v2.sql"))
+}
+
+func updateSchema(currentVersion int) error {
+	logger.Debug("running schema update", "next", currentVersion+1)
+	switch currentVersion {
+	case 1:
+		return runTxQueries(MustAsset("v1_to_v2.sql"))
+	}
+	return nil
+}
+
+func runTxQueries(queries []byte) error {
+	queryList := bytes.Split(queries, []byte("-- \\run\\"))
+	tx, err := DB.Begin()
+	if err != nil {
+		logger.Error("couldn't begin transaction", "err", err)
+		return err
+	}
+	for _, q := range queryList {
+		q = bytes.TrimSpace(q)
+		qStr := string(q)
+		logger.Debug("running query", "q", qStr)
+		_, err := tx.Exec(qStr)
 		if err != nil {
+			logger.Error("couldn't execute query, rolling back transaction", "err", err)
 			tx.Rollback()
 			return err
 		}
 	}
 	if err := tx.Commit(); err != nil {
+		logger.Error("couldn't commit transaction", "err", err)
 		return err
 	}
 	return nil
